@@ -1,0 +1,200 @@
+﻿@using WebUI.Components
+@using WebUI.Extensions;
+@using WebUI.Theming;
+@inherits M2P.WebUI.Dialogs.Dialog
+
+<style>
+    .icon-tooltip {
+        margin-top: 0.15em !important;
+        margin-bottom: -0.16em !important;
+        margin-left: 0px !important;
+        padding: 0 !important;
+    }
+    .width-80{
+        width: 80px;
+    }
+    .left-80{
+        left: 80px;
+    }
+</style>
+
+<MudDialog Style="overflow-x:hidden; overflow-y: auto">
+    <DialogContent>        
+        <MudPaper Elevation="0" Class="pa-4">
+            <MudGrid>
+                
+                <MudItem xs="12">
+                    <MudStack Row="true" Justify="Justify.SpaceAround" AlignItems="AlignItems.Center">
+                        <M2PTextField T="string" Label="@Resource.Team" Disabled="true" Value="@Params.TeamName" />
+                        <M2PTextField T="string" Label="@Resource.Product" Disabled="true" Value="@Params.ProductName" />
+                        <M2PTextField T="string" Label="@Resource.Layout" Disabled="true" Value="@Params.LayoutName" />
+                    </MudStack>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" Class="mt-4" PanelClass="pa-6">
+   
+                        <MudTabPanel Text="@Resource.Availables">
+                            <MudStack Class="mb-4" Row="true" Justify="Justify.FlexStart">
+                                <M2PTextField T="string" Label="@Resource.HCWorkday" @bind-Value="FilterName" />
+                                <M2PSwitch Label="@Resource.DisplayOnlyActiveHCs" @bind-Checked="FilterActiveOnly"></M2PSwitch>
+                                <M2PSwitch Label="@Resource.DisplayTrainedHCsFirst" @bind-Checked="OrderTrainedFirst"></M2PSwitch>
+                            </MudStack>
+
+                            @if (@IsLoading)
+                            {
+                                <MudItem Class="mt-4 mr-4 ml-4" xs="12">
+                                    <M2PProgressLinear Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+                                </MudItem>
+                            }
+                            else
+                            {
+                                <M2PTable @ref="tableAvailables" Elevation="0" T="PresentedHC" Hover="false"
+                                          Items="PresentedHCs" RowsPerPage="@Paging.DEFAULT_PAGE_SIZE"
+                                          Filter="new Func<PresentedHC,bool>(FilterFunc)"
+                                          RowClassFunc="@RowClass">
+                                    <HeaderContent>
+                                        <MudTh Class="fixed-column left width-80"></MudTh>
+                                        <MudTh Class="fixed-column left-80">
+                                            <TH>@Resource.HC</TH>
+                                        </MudTh>
+                                        <MudTh>
+                                            <TH>@Resource.Workday</TH>
+                                        </MudTh>
+                                        <MudTh>
+                                            <TH>@Resource.Active</TH>
+                                        </MudTh>
+                                        @foreach (var x in Params.TPWorkstations)
+                                        {
+                                            <ThCriticalityLevel Workstation="@x.Workstation"></ThCriticalityLevel>
+                                        }
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTh Class="fixed-column left width-80">
+                                            <MudIconButton 
+                                                Disabled="@(!context.IsActive())"
+                                                Icon="@Icons.Material.Filled.AddCircle" 
+                                                OnClick="() => OnAddSelected(context)" />
+                                        </MudTh>
+                                        <MudTd Class="fixed-column left-80">
+                                            <Span Inline>@context.Name</Span>
+                                        </MudTd>
+                                        <MudTd>@context.Workday</MudTd>
+                                        <MudTd>
+                                            @if (context.IsActive())
+                                            {
+                                                <p>@Resource.Yes</p>
+                                            }
+                                            else
+                                            {
+                                                <MudTooltip Text="@context.Statuses.Name">
+                                                    <span class="inline">
+                                                        @(Resource.No)
+                                                        <M2PIcon Icon="@Icons.Material.Filled.Info"
+                                                                 Class="icon-tooltip"
+                                                                 Size="MudBlazor.Size.Small" />
+                                                    </span>
+                                                </MudTooltip>
+                                            }
+                                        </MudTd>
+                                        @foreach (var x in Params.TPWorkstations)
+                                        {
+                                            <TdCriticalityLevel Workstation="@x.Workstation" HCModel="@GetHCModel(context.Id)" />
+                                        }
+                                    </RowTemplate>
+                                    <PagerContent>
+                                        @if (!IsLoading && !@tableAvailables.FilteredItems.Any())
+                                        {
+                                            <M2PText Align="Align.Center" Class="mt-10 mb-6">@Resource.NoRecordsFound</M2PText>
+                                        }
+                                        <M2PPagination Class="d-flex justify-center pa-4 mt-2"
+                                                       SelectedChanged="AvailablesPageChanged"
+                                                       Count="@((tableAvailables.GetFilteredItemsCount() + tableAvailables.RowsPerPage - 1) / tableAvailables.RowsPerPage)" />
+                                    </PagerContent>
+                                </M2PTable>
+                            }
+                        </MudTabPanel>
+
+                        <MudTabPanel Text="@Resource.Selecteds" BadgeData="@SelectedHCs.Count()" Disabled="@(!SelectedHCs.Any())">
+                            <M2PTable @ref="@tableSelecteds" Elevation="0" T="PresentedHC" Hover="false"
+                                      Items="SelectedHCs" RowsPerPage="@Paging.DEFAULT_PAGE_SIZE">
+                                <HeaderContent>
+                                    <MudTh Class="fixed-column left width-80"></MudTh>
+                                    <MudTh Class="fixed-column left-80">
+                                        <TH>@Resource.HC</TH>
+                                    </MudTh>
+                                    <MudTh>
+                                        <TH>@Resource.Workday</TH>
+                                    </MudTh>
+                                    <MudTh>
+                                        <TH>@Resource.Active</TH>
+                                    </MudTh>
+                                    @foreach (var x in Params.TPWorkstations)
+                                    {
+                                        <ThCriticalityLevel Workstation="@x.Workstation"></ThCriticalityLevel>
+                                    }
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd Class="fixed-column left width-80">
+                                        <MudIconButton 
+                                            Icon="@Icons.Material.Filled.RemoveCircle" 
+                                            OnClick="() => OnRemoveSelected(context)" />
+                                    </MudTd>
+                                    <MudTd Class="fixed-column left-80">
+                                        <Span Inline>@context.Name</Span>
+                                    </MudTd>
+                                    <MudTd>@context.Workday</MudTd>
+                                    <MudTd>
+                                        @if (context.IsActive())
+                                        {
+                                            <p>@Resource.Yes</p>
+                                        }
+                                        else
+                                        {
+                                            <MudTooltip Text="@context.Statuses.Name">
+                                                <span class="inline">
+                                                    @(Resource.No)
+                                                    <M2PIcon Icon="@Icons.Material.Filled.Info"
+                                                             Class="icon-tooltip"
+                                                             Size="MudBlazor.Size.Small" />
+                                                </span>
+                                            </MudTooltip>
+                                        }
+                                    </MudTd>
+                                    @foreach (var x in Params.TPWorkstations)
+                                    {
+                                        <TdCriticalityLevel Workstation="@x.Workstation" HCModel="@GetHCModel(context.Id)" />
+                                    }
+                                </RowTemplate>
+                                <PagerContent>
+                                    @if (!IsLoading && !@tableSelecteds.FilteredItems.Any())
+                                    {
+                                        <M2PText Align="Align.Center" Class="mt-10 mb-6">@Resource.NoRecordsFound</M2PText>
+                                    }
+                                    <M2PPagination Class="d-flex justify-center pa-4 mt-2"
+                                                   SelectedChanged="SelectedsPageChanged"
+                                                   Count="@((tableSelecteds.GetFilteredItemsCount() + tableSelecteds.RowsPerPage - 1) / tableSelecteds.RowsPerPage)" />
+                                </PagerContent>
+                            </M2PTable>
+                        </MudTabPanel>
+
+                    </MudTabs>
+                </MudItem>
+            </MudGrid>
+
+            @* <Divider Class="mt-4 mb-4" /> *@
+            
+         </MudPaper>
+     </DialogContent>
+     <DialogActions>
+        <MudGrid>
+            <MudItem xs="12" Class="d-flex justify-end">
+                <FlexButton Clicked="OnCancel">@Resource.Cancel</FlexButton>
+                <FlexButton Clicked="OnConfirm" Disabled="@(IsLoading || !SelectedHCs.Any())" Class="ml-4"
+                    Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled">
+                    @Resource.AddSelectedHCs
+                </FlexButton>
+            </MudItem>
+        </MudGrid>
+     </DialogActions>
+</MudDialog>

@@ -1,0 +1,33 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudText>@ContentText</MudText>
+    </DialogContent>
+    <DialogActions>
+        <FlexButton Clicked="Submit" Color="@PrimaryButtonColor" 
+            Variant="M2P.Web.Components.Variant.Filled">
+            @PrimaryButtonText
+        </FlexButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public string? ContentText { get; set; }
+    [Parameter] public string? PrimaryButtonText { get; set; }
+    [Parameter] public Color PrimaryButtonColor { get; set; } = Color.Primary;
+
+    void Submit() => MudDialog?.Close();
+    void Cancel() => MudDialog?.Cancel();
+
+    public async static Task ShowAsync(IDialogService DialogService, string Title, string Message, string PrimaryButtonText)
+    {
+        var parameters = new DialogParameters<OkDialog>
+        {
+            { x => x.ContentText, Message },
+            { x => x.PrimaryButtonText, PrimaryButtonText }
+        };
+        var options = new DialogOptions() { CloseButton = false, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<OkDialog>(Title, parameters, options);
+        await dialog.Result;
+    }
+}

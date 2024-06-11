@@ -1,0 +1,163 @@
+﻿@page "/rises"
+@using WebUI.Components
+@using M2P.Web.Shell.Views
+@if (!Session.HasAccountPermissionTo(Permissions.MFG_VIEW_RAMP_CONFIGURATION))
+{
+    <NotAllowedView />
+    return;
+}
+
+<MudPaper Class="pa-8">
+    <MudGrid>
+        <MudItem xs="6">
+            <M2PText Typo="Typo.h5" Class="mb-3">@Resource.RiseSetups</M2PText>
+        </MudItem>
+        <MudItem xs="6" Class="d-flex justify-end">
+            @if (Session.HasAccountPermissionTo(Permissions.MFG_CREATE_RAMP_CONFIGURATION))
+			{
+            <FlexButton 
+                Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                Clicked="OnAddSetup">@Resource.AddSetup</FlexButton>
+            }
+        </MudItem>
+    </MudGrid>
+
+    @if (@IsLoading)
+    {
+        <MudItem Class="mt-4 mb-4" xs="12">
+            <M2PProgressLinear Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+        </MudItem>
+    }
+
+    <MudGrid Class="mt-8 mb-4">
+        <MudItem xs="4">
+            <MudAutocomplete Disabled="@IsLoading" T="Product" Label="@Resource.Product" 
+                @bind-Value="FilterProduct" Clearable OnClearButtonClick="@(_ => FilterProduct = null)"
+                ToStringFunc="@(e => e.Name)" SearchFunc="@SearchProductAsync"
+                Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                Dense="true" ShowProgressIndicator="true" />
+        </MudItem>
+
+        <MudItem xs="4">
+            <M2PSelect Disabled="DisableCategoryList || IsLoading" T="string" Label="@Resource.Category"
+                       @bind-Value="FilterCategory" Clearable>
+                @foreach (var category in Categories)
+                {
+                    <MudSelectItem Value="@category">@category</MudSelectItem>
+                }
+            </M2PSelect>
+        </MudItem>
+
+         <MudItem xs="4">
+             <MudNumericField Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                              HideSpinButtons="true"
+                              Label="@($"{Resource.MinimumTraining} (%)")" @bind-Value="TrainingMin"
+                              Disabled="IsLoading" />
+         </MudItem>
+
+        <MudItem xs="4">
+            <MudNumericField Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                HideSpinButtons="true"
+                Label="@($"{Resource.MaximumTraining} (%)")" @bind-Value="TrainingMax"
+                Disabled="IsLoading" />
+        </MudItem>
+
+        <MudItem xs="4">
+            <M2PDatePicker Disabled="@IsLoading" Label="@Resource.StartCreationDate" @bind-Date="FilterStartCreationDate"
+                PickerVariant="PickerVariant.Dialog" Variant="MudBlazor.Variant.Outlined"
+                MaxDate="FilterEndCreationDate"
+                Margin="Margin.Dense" Clearable></M2PDatePicker>
+        </MudItem>
+
+         <MudItem xs="4">
+             <M2PDatePicker Disabled="@IsLoading" Label="@Resource.EndCreationDate" @bind-Date="FilterEndCreationDate"
+                PickerVariant="PickerVariant.Dialog" Variant="MudBlazor.Variant.Outlined"
+                MinDate="FilterStartCreationDate"
+                Margin="Margin.Dense" Clearable></M2PDatePicker>
+         </MudItem>
+
+        <MudItem xs="12" Class="d-flex justify-end">
+            <FlexButton Disabled="@IsLoading" Clicked="OnFilterRequested">@Resource.Filter</FlexButton>
+        </MudItem>
+    </MudGrid>
+
+    <M2PTable Elevation="0" Class="pa-4" @ref="@_table" Items="@RiseList"
+              CustomHeader="true" HorizontalScrollbar="true">
+        <ColGroup>
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            @foreach (int _ in RiseDays)
+            {
+                <col style="max-width: 60px !important; min-width: 60px !important;" />
+            }
+            <col />
+            <col />
+        </ColGroup>
+        <HeaderContent>
+            <MudTHeadRow Class="header-centered">
+                <MudTh colspan="5"></MudTh>
+                <MudTh colspan="@RiseDays.Count()"><TH Align="Align.Center">@Resource.Days</TH></MudTh>
+                <MudTh colspan="2"></MudTh>
+            </MudTHeadRow>
+            <MudTHeadRow>
+                <MudTh><TH>@Resource.Product</TH></MudTh>
+                <MudTh colspan="2"><TH>@($" {Resource.Training} (%)")</TH></MudTh>
+                <MudTh><TH>@Resource.Category</TH></MudTh>
+                <MudTh><TH>@($" {Resource.Impact} (%)")</TH></MudTh>
+                @foreach (int day in RiseDays)
+                {
+                    <MudTh><TH Align="Align.Center">@day</TH></MudTh>
+                }
+                <MudTh><TH>@Resource.CreationDate</TH></MudTh>
+                <MudTh><TH Align="Align.Right">@Resource.Actions</TH></MudTh>
+            </MudTHeadRow>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd DataLabel="@Resource.Product">@context.Product.Name</MudTd>
+            <MudTd DataLabel="@($" {Resource.Training} (%)")">@context.TrainingMin</MudTd>
+            <MudTd DataLabel="@($" {Resource.Training} (%)")">@context.TrainingMax</MudTd>
+            <MudTd DataLabel="@Resource.Category">@context.Category</MudTd>
+            <MudTd DataLabel="@($" {Resource.Impact} (%)")">@context.PlanImpact</MudTd>
+            @foreach (int day in RiseDays)
+            {
+                <MudTd Class="pl-2 pr-2 text-center">
+                    @if (day <= @context.RiseParams.Count())
+                    {
+                        @($"{context.RiseParams.ElementAt(day-1).Percentage}%")
+                    }
+                    else
+                    {
+                        @($"-")
+                    }
+                </MudTd>
+            }
+            <MudTd DataLabel="@Resource.CreationDate">@context.CreationDate.ToLocalTime()</MudTd>
+            <MudTd DataLabel="@Resource.Actions" Class="d-flex justify-end">
+                <M2PKebabMenu Disabled="@IsLoading"
+                    Items="@(
+                        new List<KebabItem>() {
+                            new(Resource.Edit, async () => OnEdit(context)),
+                            new(Resource.Clone, async () => await OnClone(context)),
+                            new(Resource.Delete, async () => await OnDelete(context)),
+                            new(Resource.ChangeLog, async ()=>await OnShowHistory(context))
+                        }
+                    )">
+                </M2PKebabMenu>
+            </MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            @if (!IsLoading && !@_table.FilteredItems.Any())
+            {
+                <M2PText Align="Align.Center" Class="mt-10 mb-6">@Resource.NoRecordsFound</M2PText>
+            }
+            <ServerSidePagination Disabled="@(IsLoading || !_table.FilteredItems.Any())"
+                                  CurrentPageChanged="PageChanged" CurrentPage="@(Paging.CurrentPage + 1)" Count="@Paging.CountPages()"
+                                  Class="d-flex justify-center pa-4" />
+        </PagerContent>
+    </M2PTable>
+</MudPaper>

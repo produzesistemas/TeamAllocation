@@ -1,0 +1,80 @@
+﻿@using WebUI.Extensions;
+@inherits M2P.WebUI.Dialogs.Dialog
+
+<MudDialog>
+    <DialogContent>
+        <MudPaper Elevation="0" Class="pa-4">
+            @if (@IsLoading)
+            {
+                <M2PProgressLinear Class="mt-8 mb-16" Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+            }
+            else{
+                <M2PTable Elevation="0" T="ProductionPlan" Items="@ProductionPlans" Hover="false"
+                    CustomHeader="true" HorizontalScrollbar="true" Style="white-space:nowrap;">
+                    <HeaderContent>
+                        <MudTHeadRow>
+                            <MudTh colspan="4"></MudTh>
+                            @foreach (DateTime d in Dates)
+                            {
+                                <MudTh></MudTh>
+                                <MudTh colspan="@Shifts.Count()">
+                                    <TH Align="Align.Center">@d.ToShortDateString()</TH>
+                                </MudTh>
+                            }
+                        </MudTHeadRow>
+                        <MudTHeadRow>
+                            <MudTh><TH>@Resource.Line</TH></MudTh>
+                            <MudTh><TH>@Resource.Product</TH></MudTh>
+                            <MudTh><TH>@Resource.Layout</TH></MudTh>
+                            <MudTh><TH>@Resource.Team</TH></MudTh>
+                            <MudTh><TH>@Resource.Quantity</TH></MudTh>
+                            @foreach (DateTime d in Dates)
+                            {
+                                <MudTh></MudTh>
+                                @foreach (Shift shift in Shifts)
+                                {
+                                    <MudTh>
+                                        <TH Align="Align.Center">@shift.Name</TH>
+                                    </MudTh>
+                                }
+                            }
+                        </MudTHeadRow>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@Resource.Line">
+                            <Span Inline>@context.ProductionLine?.Name</Span>
+                        </MudTd>
+                        <MudTd DataLabel="@Resource.Product">
+                            <Span Inline>@context.Product?.Name</Span>
+                        </MudTd>
+                        <MudTd DataLabel="@Resource.Layout">
+                            <Span Inline>@context.Layout?.Name</Span>
+                        </MudTd>
+                        <MudTd DataLabel="@Resource.Team">
+                            @context.Team?.Description
+                            @if (context.AppliesRise())
+                            {
+                                <MudTooltip Text="@context.RiseParamsToString()">
+                                    <M2PIcon Icon="@Icons.Material.Filled.TrendingUp" 
+                                        Color="Color.Error" Class="ml-1 pa-0" Size="MudBlazor.Size.Small"
+                                        Style="margin-bottom: -0.29em!important;}" />
+                                </MudTooltip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="@Resource.Quantity">@context.Quantity</MudTd>
+                        @foreach (DateTime date in Dates)
+                        {
+                            <MudTh></MudTh>
+                            @foreach (Shift shift in Shifts)
+                            {
+                                <MudTh DataLabel="@shift.Name" Class="text-center">
+                                    @GetQuantity(context, shift.Id, date)
+                                </MudTh>
+                            }
+                        }
+                    </RowTemplate>
+                </M2PTable>
+            }
+         </MudPaper>
+     </DialogContent>
+</MudDialog>

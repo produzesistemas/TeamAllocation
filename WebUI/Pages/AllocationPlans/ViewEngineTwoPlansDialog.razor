@@ -1,0 +1,123 @@
+﻿@using WebUI.Extensions;
+@inherits M2P.WebUI.Dialogs.Dialog
+
+<style>
+    .mud-table-container {
+        overflow-y: scroll !important;
+    }
+    .icon {
+        margin-top: 0.15em !important;
+        margin-bottom: -0.16em !important;
+        margin-left: 10px !important;
+        padding: 0 !important;
+    }
+</style>
+
+<MudDialog>
+    <DialogContent>
+        <MudPaper Elevation="0" Class="pa-4">
+            @if (IsLoading)
+            {
+                <M2PProgressLinear Class="mt-8 mb-16" Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+            }
+            else
+            {
+                <MudStack Row="true" Class="mb-4 d-flex justify-end">
+                    @if (IsLoadingDownload)
+                    {
+                        <M2PProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    }
+                    <FlexButton Clicked="() => OnDownloadRequested()" Disabled="@(IsLoading || IsLoadingDownload)" 
+                        Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled">
+                        @Resource.Download
+                    </FlexButton>
+                </MudStack>
+
+                <M2PSimpleTable Elevation="0" Class="mud-width-full">
+                    <thead>
+                        <tr>
+                            <th><TH>@Resource.Line</TH></th>
+                            <th><TH>@Resource.Product</TH></th>
+                            <th><TH>@Resource.Layout</TH></th>
+                            <th><TH>@Resource.PriorityAbbreviation</TH></th>
+                            <th><TH>@Resource.Shift</TH></th>
+                            @foreach (var date in ProductionPlans.GetDates())
+                            {
+                                <th style="min-width: 200px;">
+                                    <TH Align="Align.Center">@date.ToShortDateString()</TH>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var productionPlan in ProductionPlans)
+                        {
+                            <tr>
+                                <td>
+                                    <Span Inline>@productionPlan.ProductionLineWithAlias()</Span>
+                                </td>
+                                <td>
+                                    <Span Inline>@productionPlan.Product.Name</Span>
+                                </td>
+                                <td>
+                                    <Span Inline>@productionPlan.Layout.Name</Span>
+                                </td>
+                                <td>
+                                    @if (productionPlan.Priority > 0)
+                                    {
+                                        <MudTooltip Text="@ResourceExt.ResourceFormat("PriorityMessage", productionPlan.Priority.ToString())">
+                                            <MudChip>@productionPlan.Priority</MudChip>
+                                        </MudTooltip>
+
+                                        @if (!productionPlan.IsFullTrained(AllocationPlanEngine.Two()))
+                                        {
+                                            <MudTooltip Text="@Resource.TeamsNotAllocatedOrNotTrained">
+                                                <M2PIcon Icon="@Icons.Material.Filled.GroupOff"
+                                                         Color="Color.Error" Class="icon"
+                                                         Size="MudBlazor.Size.Small"/>
+                                            </MudTooltip>
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    <table class="table-nolines">
+                                        <tbody>
+                                            @foreach (var shift in productionPlan.GetShifts())
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        @shift.Name
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </td>
+                                @foreach (var date in ProductionPlans.GetDates())
+                                {
+                                    <td>
+                                        <table class="table-nowrap table-nolines">
+                                            <tbody>
+                                                @foreach (var shift in productionPlan.GetShifts())
+                                                {
+                                                    <tr>
+                                                        <td class="text-center pr-0">
+                                                            @GetRise(productionPlan, shift.Id, date)
+                                                        </td>
+                                                        <td class="text-center">
+                                                            @GetTeamName(productionPlan, shift.Id, date)
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </M2PSimpleTable>
+            }
+         </MudPaper>
+     </DialogContent>
+</MudDialog>

@@ -1,0 +1,62 @@
+﻿@using WebUI.Extensions;
+@inherits M2P.WebUI.Dialogs.Dialog
+
+<MudDialog Style="overflow-y:hidden">
+    <DialogContent>
+        <MudPaper Elevation="0" Class="pa-4">
+            <MudItem xs="5">
+                <M2PSelect T="TeamProduct" Label="@($"{Resource.Product} / {Resource.Layout}")"
+                    Value="SelectedTeamProduct" ValueChanged="OnProductSelected" 
+                    Disabled="IsLoading">
+                    @if (Team is not null)
+                    {
+                        @foreach (var teamProduct in Team.TeamProducts)
+                        {
+                            <MudSelectItem Value="@teamProduct">@($"{teamProduct.Product.Name} • {teamProduct.Layout.Name}")</MudSelectItem>
+                        }
+                    }
+                </M2PSelect>
+            </MudItem>
+            @if (IsLoading)
+            {
+                <M2PProgressLinear Class="mt-8 mb-16" Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+            }
+            else
+            {
+                <M2PTable Elevation="0" Class="mt-4" T="HC" Hover="false" HorizontalScrollbar="true" Items="HCs"
+                    FixedHeader="true" Height="350px">
+                    <HeaderContent>
+                        <MudTh Class="fixed-column left"><TH>@Resource.Members</TH></MudTh>
+                        <MudTh><TH>@Resource.Workday</TH></MudTh>
+                        <MudTh><TH>@Resource.Active</TH></MudTh>
+                        @foreach (var x in SelectedTeamProduct.Product.Workstations)
+                        {
+                            <ThCriticalityLevel Workstation="@x"></ThCriticalityLevel>
+                        }
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd Class="fixed-column left"><Span Inline>@context.Name</Span></MudTd>
+                        <MudTd>@context.Workday</MudTd>
+                        <MudTd>
+                            @if (context.IsActive())
+                            {
+                                <p>@Resource.Yes</p>
+                            }
+                            else
+                            {
+                                <MudTooltip Text="@context.Statuses.Name">
+                                    @(Resource.No)
+                                </MudTooltip>
+                            }
+                        </MudTd>
+                        @foreach (var x in SelectedTeamProduct.Product.Workstations)
+                        {
+                            <TdCriticalityLevel Workstation="@x" HC="@context"
+                                                Checked="@IsHCAllocated(x, context)" />
+                        }
+                    </RowTemplate>
+                </M2PTable>
+            }
+        </MudPaper>
+     </DialogContent>
+</MudDialog>

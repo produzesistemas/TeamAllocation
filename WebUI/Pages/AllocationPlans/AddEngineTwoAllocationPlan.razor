@@ -1,0 +1,190 @@
+﻿@page "/plans/engines/add-secondary"
+@page "/plans/engines/edit-secondary/{AllocationPlanId}"
+
+@using WebUI.Extensions
+
+<style>
+    .table-padding * tr > td, .table-padding * tr th {
+        padding: 4px !important;
+    }
+    .text-button{
+        border-color: #aaaaaa55 !important;
+        min-height: 42px !important;
+        max-height: 42px !important;
+    }
+    .mud-table-container{
+        overflow-y: auto !important;
+    }
+    .icon{
+        margin-top: 0.15em !important;
+        margin-bottom: -0.16em !important;
+        margin-left: 10px !important;
+        padding: 0 !important;
+    }
+</style>
+
+<MudPaper Class="pa-8">
+    <MudGrid>
+        <MudItem xs="6">
+            <MudText Typo="Typo.h5" Class="mb-3">
+                @(IsEdit() ? Resource.EditAllocationPlan : Resource.AddAllocationPlan)
+            </MudText>
+        </MudItem>
+        <MudItem xs="6" Class="d-flex justify-end">
+            <FlexButton Clicked="OnBack" Class="ml-4">@Resource.Back</FlexButton>
+        </MudItem>
+    </MudGrid>
+
+    @if (@IsLoading)
+    {
+        <MudItem Class="mt-8 mb-8" xs="12">
+            <M2PProgressLinear Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+        </MudItem>
+    }
+
+    <MudStack Row="true" Class="mb-3 mt-6">
+        <M2PText Typo="Typo.h6">@Resource.ProductionPlan</M2PText>
+            <MudSpacer />
+            <M2PButton Disabled="@IsLoading"
+                Variant="MudBlazor.Variant.Outlined" OnClick="OnTemplateRequested"
+                Color="MudBlazor.Color.Default"> @Resource.DownloadTemplate</M2PButton>
+            <MudFileUpload Class="d-flex justify-end" T="IBrowserFile" Accept=".xlsx, .lsx" FilesChanged="OnSpreadsheetUpload" Style="margin:0;">
+                <ButtonTemplate>
+                    <M2PButton HtmlTag="label"
+                                Disabled="@IsLoading"
+                                Variant="MudBlazor.Variant.Outlined"
+                                Color="Color.Default"
+                                for="@context">
+                        @Resource.SpreadsheetUpload
+                </M2PButton>
+            </ButtonTemplate>
+        </MudFileUpload>
+    </MudStack>
+
+    <MudStack Class="mb-3 mt-6">
+        @if (!ProductionPlans.Any())
+        {
+            <MudGrid>
+                <MudItem>
+                    <M2PText Typo="Typo.caption" Class="mt-4">@Resource.NoProductionPlansEntered</M2PText>
+                </MudItem>
+            </MudGrid>
+        }
+        else
+        {
+            <MudStack Row="true" Class="mb-4">
+                <FlexButton Disabled="@(IsLoading || !HasAllocatedTeams())"
+                    Clicked="OnRemoveTeams" Class="mt-3">
+                    @Resource.RemoveTeams
+                </FlexButton>
+            </MudStack>
+
+            <M2PSimpleTable Elevation="0" Class="mud-width-full">
+                <thead>
+                    <tr>
+                        <th><TH>@Resource.Line</TH></th>
+                        <th><TH>@Resource.Product</TH></th>
+                        <th><TH>@Resource.Layout</TH></th>
+                        <th><TH>@Resource.PriorityAbbreviation</TH></th>
+                        <th><TH>@Resource.Shift</TH></th>
+                        @foreach (var date in ProductionPlans.GetDates())
+                        {
+                            <th style="min-width: 200px;">
+                                <TH Align="Align.Center">@date.ToShortDateString()</TH>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var productionPlan in ProductionPlans)
+                    {
+                        <tr>
+                            <td>
+                                <Span Inline>@productionPlan.ProductionLineWithAlias()</Span>
+                            </td>
+                            <td>
+                                <Span Inline>@productionPlan.Product.Name</Span>
+                            </td>
+                            <td>
+                                <Span Inline>@productionPlan.Layout.Name</Span>
+                            </td>
+                            <td>
+                                @if (productionPlan.Priority > 0)
+                                {
+                                    <MudTooltip Text="@ResourceExt.ResourceFormat("PriorityMessage", productionPlan.Priority.ToString())">
+                                        <MudChip>@productionPlan.Priority</MudChip>
+                                    </MudTooltip>
+
+                                    @if (!productionPlan.IsFullTrained(AllocationPlanEngine.Two()))
+                                    {
+                                        <MudTooltip Text="@Resource.TeamsNotAllocatedOrNotTrained">
+                                            <M2PIcon Icon="@Icons.Material.Filled.GroupOff"
+                                                     Color="Color.Error" Class="icon"
+                                                     Size="MudBlazor.Size.Small" />
+                                        </MudTooltip>
+                                    }
+                                }
+                            </td>
+                            <td>
+                                <table class="table-nolines">
+                                    <tbody>
+                                        @foreach (var shift in productionPlan.GetShifts())
+                                        {
+                                            <tr>
+                                                <td>
+                                                    @shift.Name
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </td>
+                            @foreach (var date in ProductionPlans.GetDates())
+                            {
+                                <td class="pa-0">
+                                    <table class="table-nowrap table-nolines table-padding">
+                                        <tbody>
+                                            @foreach (var shift in productionPlan.GetShifts())
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <MudButtonGroup Class="mud-width-full" Color="Color.Default" Variant="MudBlazor.Variant.Outlined">
+                                                            <MudButton Class="text-button mud-width-full"
+                                                                Disabled="@(productionPlan.GetQuantityAt(shift.Id, date) == 0)"
+                                                                OnClick="()=>OnSelectTeam(shift.Id, date, productionPlan)">
+                                                                @productionPlan.GetPlanCell(shift.Id, date)
+                                                            </MudButton>
+                                                            <MudIconButton Class="text-button" Icon="@Icons.Material.Filled.Clear"
+                                                                Disabled="@(productionPlan.GetQuantityAt(shift.Id, date) == 0)"
+                                                                OnClick="()=>OnRemoveTeam(shift.Id, date, productionPlan)"
+                                                                Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Default">
+                                                            </MudIconButton>
+                                                        </MudButtonGroup>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </M2PSimpleTable>
+        }
+    </MudStack>
+
+    <Divider Class="mt-8 mb-4" />
+    <MudGrid>
+        <MudItem xs="12" Class="d-flex justify-end">
+            <FlexButton Disabled="@(IsLoading)" Clicked="OnCancel">
+                @Resource.Cancel
+            </FlexButton>
+            <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                        Disabled="@(IsLoading || !IsValid())" 
+                        Clicked="OnSaveRequested" Class="ml-4">
+                    @Resource.Save
+            </FlexButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>

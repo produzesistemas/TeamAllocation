@@ -1,0 +1,37 @@
+﻿@using WebUI.Extensions;
+@inherits M2P.WebUI.Dialogs.Dialog
+
+<MudDialog Style="overflow-y: unset !important;">
+    <DialogContent>        
+        <MudPaper Elevation="0" Class="pa-4">
+            <FlexStack>
+                @if (@IsLoading)
+                {
+                    <M2PProgressLinear Class="mt-8 mb-16" Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+                }
+                else{
+                    <M2PTable Elevation="0" Class="mt-4" T="PresentedTeam" Items="PresentedTeams" Hover="false"
+                        Height="400px" FixedHeader="true">
+                        <HeaderContent>
+                            <MudTh><TH>@Resource.Team</TH></MudTh>
+                            <MudTh><TH>@Resource.Skill</TH></MudTh>
+                            <MudTh></MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@Resource.Team">@context.Team.Description</MudTd>
+                            <MudTd DataLabel="@Resource.Skill"><MudText>@Skill.Get(@context.Team)</MudText></MudTd>
+                            <MudTd Class="d-flex justify-end">
+                                <M2PButton OnClick="() => OnViewTeam(context.Team, context.ProductionPlan.Product, context.ProductionPlan.LayoutId)"
+                                            Variant="MudBlazor.Variant.Outlined" Color="Color.Default"
+                                            StartIcon="@Icons.Material.Filled.Visibility">
+                                    @Resource.View
+                                </M2PButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </M2PTable>
+                }
+            </FlexStack>
+            
+         </MudPaper>
+     </DialogContent>
+</MudDialog>

@@ -1,0 +1,162 @@
+﻿@page "/rises/add"
+@page "/rises/edit/{RiseId}"
+@using WebUI.Components
+@using WebUI.Extensions;
+
+<style>
+    .me-auto{
+        white-space: pre-wrap;
+    }
+</style>
+
+<MudPaper Class="pa-8">
+    <MudGrid>
+        <MudItem xs="6">
+            <MudText Typo="Typo.h5" Class="mb-3">
+                @(IsEditing() ? Resource.EditRiseSetup : Resource.AddRiseSetup)
+            </MudText>
+        </MudItem>
+        <MudItem xs="6" Class="d-flex justify-end">
+            <FlexButton Disabled="@IsLoading" Clicked="OnBack" Class="ml-4">@Resource.Back</FlexButton>
+        </MudItem>
+    </MudGrid>
+
+    @if (@IsLoading)
+    {
+        <MudItem Class="mt-4 mb-4" xs="12">
+            <M2PProgressLinear Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+        </MudItem>
+    }
+
+    <MudForm @ref="Form" @bind-IsValid="@ValidationSuccess">
+        <MudGrid Class="mb-3 mt-6">
+            <MudItem xs="6">
+                <M2PText Typo="Typo.h6">@Resource.GeneralInfo</M2PText>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid>
+            <MudItem xs="6">
+                <MudAutocomplete Disabled="@IsLoading" T="Product" Label="@Resource.Product" Clearable
+                    @bind-Value="Product"
+                    ToStringFunc="@(e => e.Name)" SearchFunc="@SearchProductAsync"
+                    Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                    Dense="true" ShowProgressIndicator="true"
+                    Required="true" RequiredError="@ResourceExt.ValueIsRequired(Resource.Product)" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                                 HideSpinButtons="true"
+                                 Label="@($"{Resource.ImpactOnThePlan} (%)")" @bind-Value="PlanImpact"
+                                 Disabled="IsLoading" Immediate="true"
+                                 Validation="@(new Func<int?, string?>(ValidatePlanImpact))">
+                </MudNumericField>
+            </MudItem>
+           
+        </MudGrid>
+
+        <MudGrid>
+            <MudItem xs="6">
+                <M2PTextField @ref="@CategoryTextField"
+                              Label="@Resource.Category" @bind-Value="Category"
+                              Disabled="IsLoading" Immediate="true" MaxLength=255
+                              Validation="@(new Func<string?, string?>(ValidateCategory))">
+                </M2PTextField>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid Class="mb-3 mt-6">
+            <MudItem xs="6">
+                <M2PText Typo="Typo.h6">@Resource.Training</M2PText>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid>
+            <MudItem xs="6">
+                <MudNumericField @ref="@TrainingMinNumericField"
+                                 Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                                 HideSpinButtons="true" 
+                                 Label="@($"{Resource.MinimumTraining} (%)")" @bind-Value="TrainingMin"
+                                 Disabled="IsLoading" Immediate="true"
+                                 Validation="@(new Func<int?, string?>(ValidateTrainingMin))" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @ref="@TrainingMaxNumericField"
+                                 Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                                 HideSpinButtons="true"
+                                 Label="@($"{Resource.MaximumTraining} (%)")" @bind-Value="TrainingMax"
+                                 Disabled="IsLoading" Immediate="true"
+                                 Validation="@(new Func<int?, string?>(ValidateTrainingMax))" />
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid Class="mt-6">
+            <MudItem xs="6">
+                <M2PText Typo="Typo.h6">@Resource.Parameters</M2PText>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid Class="mb-3">
+            <MudItem xs="4">
+                <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                            Disabled="IsLoading"
+                            Clicked="OnAddRiseParam" Class="mt-3">@Resource.AddDay</FlexButton>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid>
+            <MudItem xs="7" Class="pl-6">
+                <M2PText>@Resource.Day</M2PText>
+            </MudItem>
+            <MudItem xs="4">
+                <M2PText>@($" {Resource.Percentage} (%)*")</M2PText>
+            </MudItem>
+        </MudGrid>
+        @foreach (RiseParam riseParam in RiseParams)
+        {
+            <Divider Class="mt-4 mb-4" />
+            <MudGrid>
+                <MudItem xs="7" Class="pl-6">
+                    <M2PText Class="mt-2">@riseParam.Day</M2PText>
+                </MudItem>
+                <MudItem xs="4" Class="d-flex justify-end">
+                    <MudNumericField Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                                         HideSpinButtons="true" Immediate="true"
+                                     @bind-Value="riseParam.Percentage"
+                                     Required="true" Disabled="IsLoading"
+                                     Validation="@(new Func<int?, string?>(value => {
+                                        return ValidatePercentage(riseParam.Day, value);
+                                     }))" />
+                </MudItem>
+                <MudItem xs="1" Class="d-flex justify-end">
+                    <FlexIconButton Disabled="@(RiseParams.Count() == 1)"
+                                    Name="@FlexIcons.Action.Delete"
+                                        Color="FlexColor.Red"
+                                    Variant="M2P.Web.Components.Variant.Outlined"
+                                    Clicked="() => OnDeleteRiseParam(riseParam)" />
+                </MudItem>
+
+            </MudGrid>
+        }
+    </MudForm>
+
+    <Divider Class="mt-8 mb-4" />
+    @if (@IsLoading)
+    {
+        <MudItem Class="mb-4" xs="12">
+            <M2PProgressLinear Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+        </MudItem>
+    }
+    <MudGrid>
+        <MudItem xs="12" Class="d-flex justify-end">
+            <FlexButton Disabled="@IsLoading" Clicked="OnCancel">
+                @Resource.Cancel
+            </FlexButton>
+            <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled" 
+                Disabled="@(!ValidationSuccess)" Clicked="OnSave" Class="ml-4">
+                @Resource.Save
+            </FlexButton>
+        </MudItem>
+    </MudGrid>
+
+</MudPaper>

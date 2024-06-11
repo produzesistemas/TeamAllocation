@@ -1,0 +1,141 @@
+﻿@page "/plans"
+
+@using WebUI.Extensions;
+@using M2P.Web.Shell.Views
+@if (!Session.HasAccountPermissionTo(Permissions.MFG_VIEW_ALLOCATION_PLAN))
+{
+    <NotAllowedView />
+    return;
+}
+
+<MudPaper Class="pa-8">
+    <MudGrid>
+        <MudItem xs="6">
+            <M2PText Typo="Typo.h5" Class="mb-3">@Resource.AllocationPlans</M2PText>
+        </MudItem>
+        <MudItem xs="6" Class="d-flex justify-end">
+            @if (Session.HasAccountPermissionTo(Permissions.MFG_CREATE_ALLOCATION_PLAN))
+			{
+            <FlexButton 
+                Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled" 
+                Clicked="OnAddAllocationPlan">@Resource.AddAllocationPlan</FlexButton>
+            }
+        </MudItem>
+    </MudGrid>
+
+    @if (@IsLoading)
+    {
+        <MudItem Class="mt-8 mb-8" xs="12">
+            <M2PProgressLinear Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+        </MudItem>
+    }
+
+    <MudGrid Class="mt-8 mb-4">
+        <MudItem xs="4">
+            <MudNumericField Disabled="@IsLoading" Label="@Resource.Number"
+                             Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                             Min="1" HideSpinButtons="true"
+                             @bind-Value="FilterNumber" Clearable></MudNumericField>
+        </MudItem>
+
+        <MudItem xs="4">
+             <M2PSelect Disabled="@IsLoading" Label="@Resource.Engine" @bind-Value="FilterEngine" Clearable>
+                @foreach (AllocationPlanEngine item in AllocationPlanEngineList)
+                {
+                    <MudSelectItem T="AllocationPlanEngine" Value="@item">
+                        @ResourceExt.AllocationPlanEngine(@item.Name)
+                    </MudSelectItem>
+                }
+            </M2PSelect>
+        </MudItem>
+
+        <MudItem xs="4">
+            <M2PDatePicker Disabled="@IsLoading" Label="@Resource.StartDate" @bind-Date="FilterStartDate"
+                           PickerVariant="PickerVariant.Dialog" Variant="MudBlazor.Variant.Outlined" 
+                           Margin="Margin.Dense" Clearable></M2PDatePicker>
+        </MudItem>
+
+        <MudItem xs="4">
+                <M2PSelect Disabled="@IsLoading" Label="@Resource.Status" @bind-Value="FilterStatus" Clearable>
+                @foreach (AllocationPlanStatus item in AllocationPlanStatusList)
+                {
+                    <MudSelectItem T="AllocationPlanStatus" Value="@item">
+                        @ResourceExt.AllocationPlanStatus(@item.Name)
+                    </MudSelectItem>
+                }
+            </M2PSelect>
+        </MudItem>
+
+        <MudItem xs="4">
+            <M2PDatePicker Disabled="@IsLoading" Label="@Resource.StartCreationDate" @bind-Date="FilterStartCreationDate"
+                           PickerVariant="PickerVariant.Dialog" Variant="MudBlazor.Variant.Outlined"
+                           MaxDate="FilterEndCreationDate"
+                           Margin="Margin.Dense" Clearable></M2PDatePicker>
+        </MudItem>
+
+         <MudItem xs="4">
+             <M2PDatePicker Disabled="@IsLoading" Label="@Resource.EndCreationDate" @bind-Date="FilterEndCreationDate"
+                            PickerVariant="PickerVariant.Dialog" Variant="MudBlazor.Variant.Outlined"
+                            MinDate="FilterStartCreationDate"
+                            Margin="Margin.Dense" Clearable></M2PDatePicker>
+         </MudItem>
+
+		<MudItem xs="12" Class="d-flex justify-end">
+            <FlexButton Disabled="@IsLoading" Clicked="OnFilterRequested">@Resource.Filter</FlexButton>
+        </MudItem>
+    </MudGrid>
+
+    <M2PTable Elevation="0" Class="pb-4 pl-4 pr-4 pt-0" @ref="@_table" Items="@AllocationPlanList">
+        <HeaderContent>
+            <MudTh><TH>@Resource.Number</TH></MudTh>
+            <MudTh><TH>@Resource.Engine</TH></MudTh>
+            <MudTh><TH>@Resource.StartDate</TH></MudTh>
+            <MudTh><TH>@Resource.EndDate</TH></MudTh>
+            <MudTh><TH>@Resource.Status</TH></MudTh>
+            <MudTh><TH>@Resource.CreationDate</TH></MudTh>
+            <MudTh><TH Align="Align.Right">@Resource.Actions</TH></MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd DataLabel="@Resource.Number">@context.Number</MudTd>
+            <MudTd DataLabel="@Resource.Type">@ResourceExt.AllocationPlanEngine(@context.Engine.Name)</MudTd>
+            <MudTd DataLabel="@Resource.StartDate">@context.StartDate.ToShortDateString()</MudTd>
+            <MudTd DataLabel="@Resource.EndDate">@context.EndDate.ToShortDateString()</MudTd>
+            <MudTd DataLabel="@Resource.Status">@ResourceExt.AllocationPlanStatus(@context.Status.Name)</MudTd>
+                <MudTd DataLabel="@Resource.CreationDate">@context.CreationDate.ToLocalTime()</MudTd>
+            <MudTd DataLabel="@Resource.Actions" Class="d-flex justify-end">
+                <M2PKebabMenu Disabled="@IsLoading"
+                    Items="@(
+                        context.Status.IsSimulation()
+                        ? new List<KebabItem>() {
+                            new(Resource.ViewPlan, async () => await OnViewPlan(context)),
+                            new(Resource.ViewTeams, async () => await OnViewTeam(context)),
+                            new(Resource.Validate, async () => await OnValidate(context)),
+                            new(Resource.Clone, async () => await OnClone(context)),
+                            new(Resource.Edit, async () => OnEdit(context)),
+                            new(Resource.Delete, async () => await OnDelete(context)),
+                            new(Resource.ChangeLog, async () => await OnHistoricChanges(context))
+                        }
+                        : new List<KebabItem>() {
+                            new(Resource.ViewPlan, async () => await OnViewPlan(context)),
+                            new(Resource.ViewTeams, async () => await OnViewTeam(context)),
+                            new(Resource.Clone, async () => await OnClone(context)),
+                            new(Resource.Delete, async () => await OnDelete(context)),
+                            new(Resource.ChangeLog, async () => await OnHistoricChanges(context))
+                        }
+                    )">
+                </M2PKebabMenu>
+            </MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            @if (!IsLoading && !@_table.FilteredItems.Any())
+            {
+                <M2PText Align="Align.Center" Class="mt-10 mb-6">@Resource.NoRecordsFound</M2PText>
+            }
+            <ServerSidePagination Disabled="@(IsLoading || !_table.FilteredItems.Any())"
+                                    CurrentPageChanged="PageChanged" CurrentPage="@(Paging.CurrentPage + 1)" Count="@Paging.CountPages()"
+                                    Class="d-flex justify-center pa-4" />
+        </PagerContent>
+    </M2PTable>
+</MudPaper>

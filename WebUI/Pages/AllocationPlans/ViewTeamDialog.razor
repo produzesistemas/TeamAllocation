@@ -1,0 +1,49 @@
+﻿@using WebUI.Extensions;
+@inherits M2P.WebUI.Dialogs.Dialog
+
+<MudDialog>
+    <DialogContent>
+        <MudPaper Elevation="0" Class="pa-4">
+            @if (IsLoading)
+            {
+                <M2PProgressLinear Class="mt-8 mb-16" Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+            }
+            else
+            {
+                <M2PTable Elevation="0" Class="mt-4" T="HC" Hover="false" Items="@HCs" 
+                    FixedHeader="true" Height="400px">
+                    <HeaderContent>
+                        <MudTh Class="fixed-column left"><TH>@Resource.Members</TH></MudTh>
+                        <MudTh><TH>@Resource.Workday</TH></MudTh>
+                        <MudTh><TH>@Resource.Active</TH></MudTh>
+                        @foreach (Workstation x in Product.Workstations)
+                        {
+                            <ThCriticalityLevel Workstation="@x"></ThCriticalityLevel>
+                        }
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd Class="fixed-column left"><Span Inline>@context.Name</Span></MudTd>
+                        <MudTd>@context.Workday</MudTd>
+                        <MudTd>
+                            @if (context.IsActive())
+                            {
+                                <p>@Resource.Yes</p>
+                            }
+                            else
+                            {
+                                <MudTooltip Text="@context.Statuses.Name">
+                                    @(Resource.No)
+                                </MudTooltip>
+                            }
+                        </MudTd>
+                        @foreach (var x in Product.Workstations)
+                        {
+                            <TdCriticalityLevel Workstation="@x" HC="@context"
+                                                Checked="@IsHCAllocated(x, context)" />
+                        }
+                    </RowTemplate>
+                </M2PTable>
+            }
+         </MudPaper>
+     </DialogContent>
+</MudDialog>

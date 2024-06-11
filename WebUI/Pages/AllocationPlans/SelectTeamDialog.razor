@@ -1,0 +1,131 @@
+﻿@using WebUI.Components
+@using WebUI.Extensions;
+@inherits M2P.WebUI.Dialogs.Dialog
+
+<style>
+    .icon-tooltip {
+        margin-top: 0.15em !important;
+        margin-bottom: -0.16em !important;
+        margin-left: 0px !important;
+        padding: 0 !important;
+    }
+</style>
+
+<MudDialog Style="overflow-x:hidden; overflow-y: auto">
+    <DialogContent>        
+        <MudPaper Elevation="0" Class="pa-4">
+            <FlexStack>
+                @if (@IsLoading)
+                {
+                    <MudItem Class="mr-4 ml-4" xs="12">
+                        <M2PProgressLinear Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+                    </MudItem>
+                } else
+                {
+                    <MudStack Row="true" Justify="Justify.SpaceAround" AlignItems="AlignItems.Center">
+                        <M2PTextField T="string" Label="@Resource.Line" Disabled="true" Value="@Line.Name" />
+                        <M2PTextField T="string" Label="@Resource.Product" Disabled="true" Value="@Product.Name" />
+                        <M2PTextField T="string" Label="@Resource.Layout" Disabled="true" Value="@Layout.Name" />
+                        <M2PTextField T="string" Label="@Resource.Shift" Disabled="true" Value="@GetShift()?.Name" />
+                    </MudStack>
+
+                    <M2PSwitch Class="mt-4" Label="@Resource.ConsiderOnlyFreeTeams" @bind-Checked="FilterFreeTeamsOnly"></M2PSwitch>
+                    
+                    <M2PTable Elevation="0" Class="mt-4" T="PresentedTeamProduct" Items="@FilteredTeamProductList"
+                              MultiSelection="false" Hover="false" @bind-SelectedItem="SelectedTeamProduct">
+                        <ColGroup>
+                            <col style="width: 5%;" />
+                            <col style="width: 30%;" />
+                            <col />
+                            <col />
+                            <col style="width: 5%;" />
+                            <col />
+                        </ColGroup>
+                        <HeaderContent>
+                            <MudTh></MudTh>
+                            <MudTh><TH>@Resource.Team</TH></MudTh>
+                            <MudTh><TH>@Resource.Category</TH></MudTh>
+                            <MudTh><TH>@Resource.Skill</TH></MudTh>
+                            <MudTh><TH>@Resource.Free</TH></MudTh>
+                            <MudTh></MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                <M2PCheckBox Disabled="@(context.IsAllocated || context.IsBlocked)"
+                                    Checked="@(context.Id == SelectedTeamProduct?.Id)" 
+                                    CheckedChanged="@(() => OnSelectTeam(context))" 
+                                    Label="" />
+                            </MudTd>
+                            <MudTd DataLabel="@Resource.Team" Class="@context.GetTextClass()">
+                                @GetTeam(context.TeamId).Description
+                            </MudTd>
+                            <MudTd DataLabel="@Resource.Category" Class="@context.GetTextClass()">
+                                @context.Category
+                            </MudTd>
+                            <MudTd DataLabel="@Resource.Skill" Class="@context.GetTextClass()">
+                                @GetSkill(@context)
+                            </MudTd>
+                            <MudTd DataLabel="@Resource.Free" Class="@context.GetTextClass()">
+                                @if (context.IsAllocated)
+                                {
+                                    <MudTooltip Text="@Resource.TeamAlreadyAllocated">
+                                        <span class="inline">
+                                            @(Resource.No)
+                                            <M2PIcon Icon="@Icons.Material.Filled.Info"
+                                                     Class="icon-tooltip"
+                                                     Size="MudBlazor.Size.Small" />
+                                        </span>
+                                    </MudTooltip>
+                                }
+                                else if (context.IsBlocked)
+                                {
+                                    <MudTooltip Text="@Resource.TeamHCsAlreadyAllocated">
+                                        <span class="inline">
+                                            @(Resource.No)
+                                            <M2PIcon Icon="@Icons.Material.Filled.Info"
+                                                     Class="icon-tooltip"
+                                                     Size="MudBlazor.Size.Small" />
+                                        </span>
+                                    </MudTooltip>
+                                }
+                                else
+                                {
+                                    <p>@Resource.Yes</p>
+                                }
+                            </MudTd>
+                            <MudTd class="d-flex justify-end">
+                                <M2PButton OnClick="() => OnViewTeam(context)"
+                                            Variant="MudBlazor.Variant.Outlined" Color="Color.Default"
+                                            StartIcon="@Icons.Material.Filled.Visibility">
+                                    @Resource.View
+                            </M2PButton>
+                        </MudTd>
+                    </RowTemplate>
+                </M2PTable>
+                }
+
+            </FlexStack>
+
+            @if (!IsLoading && !@FilteredTeamProductList.Any())
+            {
+                <M2PText Align="Align.Center" Class="mt-10 mb-6">
+                    @Resource.NoTeamsFoundToSelectedProductionPlan
+                </M2PText>
+            }
+
+            <Divider Class="mt-8 mb-4" />
+            
+         </MudPaper>
+     </DialogContent>
+     <DialogActions>
+        <MudGrid>
+            <MudItem xs="12" Class="d-flex justify-end">
+                <FlexButton Clicked="OnCancel">@Resource.Cancel</FlexButton>
+                <FlexButton Clicked="OnConfirm" Disabled="@(IsLoading || SelectedTeamProduct == null)" Class="ml-4"
+                    Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled">
+                    @Resource.AddSelectedTime
+                </FlexButton>
+            </MudItem>
+        </MudGrid>
+     </DialogActions>
+</MudDialog>

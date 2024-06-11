@@ -1,0 +1,38 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudText>@ContentText</MudText>
+    </DialogContent>
+    <DialogActions>
+        <FlexButton Clicked="Cancel">
+            @SecondaryButtonText
+        </FlexButton>
+        <FlexButton Clicked="Submit" Color="@PrimaryButtonColor" 
+            Variant="M2P.Web.Components.Variant.Filled">
+            @PrimaryButtonText
+        </FlexButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public string? ContentText { get; set; }
+    [Parameter] public string? PrimaryButtonText { get; set; }
+    [Parameter] public string SecondaryButtonText { get; set; } = Resource.Cancel;
+    [Parameter] public Color PrimaryButtonColor { get; set; } = Color.Red;
+
+    void Submit() => MudDialog?.Close(DialogResult.Ok(true));
+    void Cancel() => MudDialog?.Cancel();
+
+    public async static Task<bool> ShowAsync(IDialogService DialogService, string Title, string Message, string PrimaryButtonText)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { x => x.ContentText, Message },
+            { x => x.PrimaryButtonText, PrimaryButtonText }
+        };
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>(Title, parameters, options);
+        var result = await dialog.Result;
+        return !result.Canceled;
+    }
+}

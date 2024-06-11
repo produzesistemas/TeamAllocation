@@ -1,0 +1,63 @@
+﻿@page "/plans/engines"
+@page "/plans/engines/edit-primary"
+@page "/plans/engines/edit-secondary"
+
+@using WebUI.Extensions;
+
+<MudPaper Class="pa-8">
+    <MudGrid>
+        <MudItem xs="6">
+            <M2PText Typo="Typo.h5" Class="mb-3">@Resource.AllocationEngines</M2PText>
+        </MudItem>
+
+        <MudItem xs="6" Class="d-flex justify-end">
+            <FlexButton Clicked="GoBack" Class="ml-4">@Resource.Back</FlexButton>
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid>
+        <MudItem>
+            <M2PText Typo="Typo.h6" Class="mb-3 mt-3">@Resource.SelectEngine</M2PText>
+            <M2PText>@Resource.SelectEngineMessage</M2PText>
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Class="mb-3 mt-3">
+        <MudItem xs="3">
+            <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                        Class="mud-width-full" Clicked="GoToPrimaryEngine">
+                @ResourceExt.AllocationPlanEngine(AllocationPlanEngine.One().Name)
+            </FlexButton>
+        </MudItem>
+
+        <MudItem xs="3">
+            <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                        Class="mud-width-full" Clicked="GoToSecodaryEngine">
+                @ResourceExt.AllocationPlanEngine(AllocationPlanEngine.Two().Name)
+            </FlexButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Inject]
+    private NavigationManager NavManager { get; init; } = default!;
+
+    [Inject] 
+    private IStringLocalizer<Resource> ResourceExt { get; init; } = default!;
+
+    private void GoBack()
+    {
+        NavManager.NavigateTo(Route.AllocationPlans);
+    }
+
+    private void GoToPrimaryEngine()
+    {
+        NavManager.NavigateTo(Route.AllocationPlansEnginesAddPrimary);
+    }
+
+    private void GoToSecodaryEngine()
+    {
+        NavManager.NavigateTo(Route.AllocationPlansEnginesAddSecondary);
+    }
+}

@@ -1,0 +1,280 @@
+﻿@page "/plans/engines/add-primary"
+@page "/plans/engines/edit-primary/{AllocationPlanId}"
+
+@using WebUI.Components
+@using WebUI.Extensions;
+
+<MudPaper Class="pa-8">
+    <MudGrid>
+        <MudItem xs="6">
+            <MudText Typo="Typo.h5" Class="mb-3">
+                @(IsBeginOrFinishState() 
+                    ? (IsEdit() ? Resource.EditAllocationPlan : Resource.AddAllocationPlan)
+                    : Resource.AddProductionPlan
+                )
+            </MudText>
+        </MudItem>
+        <MudItem xs="6" Class="d-flex justify-end">
+            @if (IsBeginOrFinishState())
+            {
+                <FlexButton Disabled="@(!CanGoNext())" Clicked="OnPreview">
+                    @Resource.Preview
+                </FlexButton>
+            }
+            <FlexButton Clicked="OnBack" Class="ml-4">@Resource.Back</FlexButton>
+        </MudItem>
+    </MudGrid>
+
+    @if (@IsLoading)
+    {
+        <MudItem Class="mt-8 mb-8" xs="12">
+            <M2PProgressLinear Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+        </MudItem>
+    }
+
+    @if (IsBeginOrFinishState())
+    {
+        <MudForm @ref="Form" @bind-IsValid="@ValidationSuccess">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-3">@Resource.AllocationPlanInfo</MudText>
+                </MudItem>
+            </MudGrid>
+            <MudGrid>
+                <MudItem xs="3">
+                    <M2PDatePicker Label="@Resource.StartDate" @bind-Date="StartDate"
+                                   MinDate="DateTime.Today" PickerVariant="PickerVariant.Dialog"
+                                   Required="true" RequiredError="@ResourceExt.ValueIsRequired(Resource.StartDate)"
+                                   Variant="MudBlazor.Variant.Outlined" Margin="Margin.Dense"/>
+                </MudItem>
+               @*  DO NOT REMOVE IT
+                   <MudItem xs="3">
+                    <M2PSelect Label="@Resource.Type" @bind-Value="AllocationPlanType"
+                               Disabled="@IsLoading"
+                               Required="true" RequiredError="@ResourceExt.ValueIsRequired(Resource.Type)">
+                        @foreach (AllocationPlanType item in AllocationPlanType.All())
+                        {
+                            <MudSelectItem T="AllocationPlanType" Value="@item">
+                                @item.Name
+                            </MudSelectItem>
+                        }
+                    </M2PSelect>
+                </MudItem> *@
+            </MudGrid>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">@Resource.ProductionPlans</MudText>
+                </MudItem>
+            </MudGrid>
+
+            @if (!ProductionPlans.Any())
+            {
+                <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                            Disabled="@(IsLoading || StartDate == null)" Clicked="OnAddProductionPlan"
+                            Class="mt-3">
+                    @Resource.AddProductionPlan
+                </FlexButton>
+            }
+            else
+            {
+                <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                                Disabled="@(IsLoading || StartDate == null)" Clicked="OnEditProductionPlans"
+                                Class="mt-3">
+                    @Resource.EditProductionPlans
+                </FlexButton>
+            }
+
+            @if (!ProductionPlans.Any())
+            {
+                <MudGrid>
+                    <MudItem>
+                        <M2PText Typo="Typo.caption" Class="mt-4">@Resource.NoProductionPlansEntered</M2PText>
+                    </MudItem>
+                </MudGrid>
+            }
+            else
+            {
+                <M2PSimpleTable Elevation="0" Class="mt-4">
+                    <thead>
+                        <tr>
+                            <th><TH>@Resource.Line</TH></th>
+                            <th><TH>@Resource.Product</TH></th>
+                            <th><TH>@Resource.Layout</TH></th>
+                            <th><TH>@Resource.Shift</TH></th>
+                            <th><TH>@Resource.Quantity</TH></th>
+                            <th><TH>@Resource.Speed</TH></th>
+                            <th><TH>@Resource.Team</TH></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (ProductionPlan x in ProductionPlans)
+                        {
+                            <tr>
+                                <td>@x.ProductionLine.Name</td>
+                                <td>@x.Product.Name</td>
+                                <td>@x.Layout.Name</td>
+                                <td>@x.Shift?.Name</td>
+                                <td>@x.Quantity.ToString()</td>
+                                <td>@x.Velocity.ToString()</td>
+                                <td>@x.Team?.Description</td>
+                            </tr>
+                        }
+                    </tbody>
+                </M2PSimpleTable>
+            }
+        </MudForm>
+    }
+
+    @if (State == AddAllocationPlanState.ProductionPlan)
+    {
+        <MudStack Row="true" Class="mb-3 mt-6">
+            <M2PText Typo="Typo.h6">@Resource.ProductionPlan</M2PText>
+            <MudSpacer />
+            <M2PButton 
+                Disabled="@IsLoading"
+                Variant="MudBlazor.Variant.Outlined"
+                Color="Color.Default"
+                OnClick="OnDownloadTemplate">
+                @Resource.DownloadTemplate
+            </M2PButton>
+            <MudFileUpload T="IBrowserFile" Accept=".xlsx, .lsx" FilesChanged="OnSpreadsheetUpload">
+                <ButtonTemplate>
+                    <M2PButton HtmlTag="label"
+                               Disabled="@IsLoading"
+                               Variant="MudBlazor.Variant.Outlined"
+                               Color="Color.Default"
+                               for="@context">
+                        @Resource.SpreadsheetUpload
+                    </M2PButton>
+                </ButtonTemplate>
+            </MudFileUpload>
+        </MudStack>
+
+        @if (!ProductionPlans.Any())
+        {
+            <MudGrid>
+                <MudItem>
+                    <M2PText Typo="Typo.caption" Class="mt-4">@Resource.NoProductionPlansEntered</M2PText>
+                </MudItem>
+            </MudGrid>
+        }
+        else
+        {
+            <M2PSimpleTable Elevation="0" Class="mt-4">
+                <thead>
+                    <tr>
+                        <th><TH>@Resource.Line</TH></th>
+                        <th><TH>@Resource.Product</TH></th>
+                        <th><TH>@Resource.Layout</TH></th>
+                        <th><TH>@Resource.Shift</TH></th>
+                        <th><TH>@Resource.Quantity</TH></th>
+                        <th><TH>@Resource.Speed</TH></th>
+                        <th><TH Align="Align.Right">@Resource.Actions</TH></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (ProductionPlan x in ProductionPlans)
+                    {
+                        <tr>
+                            <td>@x.ProductionLine.Name</td>
+                            <td>@x.Product.Name</td>
+                            <td>@x.Layout.Name</td>
+                            <td>@x.Shift?.Name</td>
+                            <td>@x.Quantity.ToString()</td>
+                            <td>@x.Velocity.ToString()</td>
+                            <td Class="d-flex justify-end">
+                                <FlexIconButton 
+                                    Name="@FlexIcons.Action.Delete" 
+                                    Color="FlexColor.Red" 
+                                    Variant="M2P.Web.Components.Variant.Outlined" 
+                                    Clicked="() => OnDeleteProductionPlan(x)" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </M2PSimpleTable>
+        }
+    }
+
+    @if (State == AddAllocationPlanState.TeamsDefinition)
+    {
+        <MudGrid>
+            <MudItem xs="12">
+                <M2PText Typo="Typo.h6" Class="mb-3 mt-6">@Resource.TeamsDefinition</M2PText>
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mb-4">
+            <FlexButton Disabled="@IsLoading"
+                        Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                        Clicked="OnAutoAddTeams" Class="mt-3">@Resource.AutoAddTeams</FlexButton>
+            <FlexButton Disabled="@(IsLoading || !HasAllocatedTeams())"
+                        Clicked="() => OnRemoveTeams()" Class="mt-3">@Resource.RemoveTeams</FlexButton>
+        </MudStack>
+
+        <M2PSimpleTable Elevation="0">
+            <thead>
+                <tr>
+                    <th><TH>@Resource.Line</TH></th>
+                    <th><TH>@Resource.Product</TH></th>
+                    <th><TH>@Resource.Layout</TH></th>
+                    <th><TH>@Resource.Shift</TH></th>
+                    <th><TH>@Resource.Quantity</TH></th>
+                    <th><TH>@Resource.Speed</TH></th>
+                    <th><TH>@Resource.Team</TH></th>
+                    <th><TH Align="Align.Right">@Resource.Actions</TH></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (ProductionPlan x in ProductionPlans)
+                {
+                    <tr>
+                        <td>@x.ProductionLine?.Name</td>
+                        <td>@x.Product?.Name</td>
+                        <td>@x.Layout?.Name</td>
+                        <td>@x.Shift?.Name</td>
+                        <td>@x.Quantity.ToString()</td>
+                        <td>@x.Velocity.ToString()</td>
+                        <td>@(x.Team != null ? x.Team.Description : "-")</td>
+                        <td>
+                            <M2PKebabMenu Disabled="@IsLoading"
+                                Items="@(
+                                    x.Team != null
+                                    ? new List<KebabItem>() {
+                                        new(@Resource.View, async () => await OnViewTeam(x)),
+                                        new(@Resource.Select, async () => await OnSelectTeam(x)),
+                                        new(@Resource.Delete, () => OnRemoveTeam(x))
+                                    }
+                                    : new List<KebabItem>() {
+                                        new(@Resource.Select, async () => await OnSelectTeam(x))
+                                    }
+                                )">
+                            </M2PKebabMenu>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </M2PSimpleTable>
+    }
+
+    <Divider Class="mt-8 mb-4"/>
+    <MudGrid>
+        <MudItem xs="12" Class="d-flex justify-end">
+            <FlexButton Disabled="@(IsLoading)" Clicked="OnCancel">
+                @Resource.Cancel
+            </FlexButton>
+            <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                        Disabled="@(IsLoading || !CanGoNext())" Clicked="OnNext" Class="ml-4">
+                @if (IsBeginOrFinishState())
+                {
+                    @Resource.Save
+                }
+                else
+                {
+                    @Resource.Next
+                }
+            </FlexButton>
+        </MudItem>
+    </MudGrid>
+
+</MudPaper>

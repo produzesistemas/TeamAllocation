@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34330.188
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TeamAllocation", "TeamAllocation\TeamAllocation.csproj", "{5496B1CB-01DC-4D26-B575-A3C5184DFE1B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAPI", "WebAPI\WebAPI.csproj", "{AF964C27-4650-4626-B75B-31607F7E4C7A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebUI", "WebUI\WebUI.csproj", "{20F0293D-6BF9-46E8-A712-517B9A5ADFFD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5496B1CB-01DC-4D26-B575-A3C5184DFE1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5496B1CB-01DC-4D26-B575-A3C5184DFE1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5496B1CB-01DC-4D26-B575-A3C5184DFE1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5496B1CB-01DC-4D26-B575-A3C5184DFE1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF964C27-4650-4626-B75B-31607F7E4C7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF964C27-4650-4626-B75B-31607F7E4C7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF964C27-4650-4626-B75B-31607F7E4C7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF964C27-4650-4626-B75B-31607F7E4C7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20F0293D-6BF9-46E8-A712-517B9A5ADFFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20F0293D-6BF9-46E8-A712-517B9A5ADFFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20F0293D-6BF9-46E8-A712-517B9A5ADFFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20F0293D-6BF9-46E8-A712-517B9A5ADFFD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2260A52D-D2E3-4CB9-A5CA-0230C053388A}
+	EndGlobalSection
+EndGlobal

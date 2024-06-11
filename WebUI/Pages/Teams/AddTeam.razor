@@ -1,0 +1,323 @@
+﻿@page "/teams/add"
+@page "/teams/edit/{TeamId}"
+
+@using WebUI.Components
+@using WebUI.Extensions
+
+@using M2P.Web.Shell.Views
+@if (!Session.HasAccountPermissionTo(Permissions.MFG_CREATE_TEAMS))
+{
+    <NotAllowedView />
+    return;
+}
+
+
+<MudPaper Class="pa-8">
+    <MudStack>
+        <MudStack Row="true" Justify="Justify.SpaceBetween">
+            <M2PText Typo="Typo.h5" Class="mb-3">
+                @if (AddTeamState.ADDING_TEAM == State)
+                {
+                    @(IsEditing() ? Resource.EditTeam : Resource.AddTeam)
+                }
+                @if (AddTeamState.ADDING_PRODUCT_TEAM == State)
+                {
+                    @(IsEditingProduct ? Resource.EditProduct : Resource.AddProduct)
+                }
+            </M2PText>
+            <FlexButton Disabled="@IsLoading" Clicked="OnBack">@Resource.Back</FlexButton>
+        </MudStack>
+
+        @if (@IsLoading)
+        {
+            <MudItem Class="mt-4 mb-4" xs="12">
+                <M2PProgressLinear Color="Color.Primary" Indeterminate="true"></M2PProgressLinear>
+            </MudItem>
+        }
+
+        @if (AddTeamState.ADDING_TEAM == State)
+        {
+            <MudForm @ref="AddingTeamForm" @bind-IsValid="@AddingTeamValidationSuccess">
+                <MudStack Row="true">
+                    <M2PText Typo="Typo.h6" Class="mb-3 mt-6">@Resource.TeamInformation</M2PText>
+                </MudStack>
+
+                <MudGrid>
+                    <MudItem xs="6">
+                            <M2PTextField MaxLength=255 Disabled="IsLoading" T="string" Label="@Resource.Name" @bind-Value="Team.Name"
+                                      Required="true" RequiredError="@ResourceExt.ValueIsRequired(Resource.Name)" />
+                    </MudItem>
+                        <MudItem xs="6">
+                            <M2PSelect Disabled="@(IsLoading || IsEditing())" T="Shift" Label="@Resource.Shift" Value="Team.Shift" ValueChanged="OnSelectShift"
+                                       Required="true" RequiredError="@ResourceExt.ValueIsRequired(Resource.Shift)">
+                                @foreach (var shift in Shifts)
+                            {
+                                <MudSelectItem T="Shift" Value="@shift">@shift.Name</MudSelectItem>
+                            }
+                        </M2PSelect>
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid>
+                    <MudItem xs="6">
+                        <MudAutocomplete Disabled="@(IsLoading || IsEditing()|| Team.Shift == null)"
+                                         T="LeaderModel" Label="@Resource.Leader" Clearable
+                                         @bind-Value="Team.Leader"
+                                         @ref="MudAutocompleteLeader"
+                                         ToStringFunc="@(e => e.Name)" SearchFunc="@SearchLeaderAsync"
+                                         Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                                         Dense="true" ShowProgressIndicator="true"
+                                         Required="true" RequiredError="@ResourceExt.ValueIsRequired(Resource.Leader)" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudStack Row="true">
+                    <M2PText Typo="Typo.h6" Class="mb-3 mt-6">@Resource.Products</M2PText>
+                </MudStack>
+
+                <MudStack Row="true" Class="mb-4">
+                    <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                                Disabled="@(IsLoading || !CanAddProduct())"
+                                Clicked="OnAddProductRequested">
+                        @Resource.AddProduct
+                    </FlexButton>
+                </MudStack>
+
+                @if (!Team.TeamProducts.Any())
+                {
+                    <MudGrid>
+                        <MudItem>
+                            <M2PText Typo="Typo.caption" Class="mt-4">@Resource.NoProductsRegistered</M2PText>
+                        </MudItem>
+                    </MudGrid>
+                }
+                else
+                {
+                    <M2PSimpleTable Elevation="0">
+                        <thead>
+                            <tr>
+                                <th><TH>@Resource.Product</TH></th>
+                                <th><TH>@Resource.Layout</TH></th>
+                                <th><TH>@Resource.Workstations</TH></th>
+                                <th><TH>@Resource.Skill</TH></th>
+                                <th><TH>@Resource.Category</TH></th>
+                                <th><TH Align="Align.Right">@Resource.Actions</TH></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var teamProduct in Team.TeamProducts)
+                            {
+                                <tr>
+                                    <td>@teamProduct.ProductName</td>
+                                    <td>@teamProduct.LayoutName</td>
+                                    <td>@teamProduct.Workstations.Count()</td>
+                                    <td>@Skill.Get(teamProduct)</td>
+                                    <td>@teamProduct.Category</td>
+                                    <td>
+                                        <Span Align="Align.Right">
+                                            <M2PKebabMenu Disabled="IsLoading"
+                                                Items="@(
+                                                    new List<KebabItem>() {
+            
+                                                        new(@Resource.Edit, () => OnEditProductRequested(teamProduct)),
+                                                        new(@Resource.Delete, async () => await OnDeleteProduct(teamProduct))
+                                                    }
+                                                )">
+                                            </M2PKebabMenu>
+                                        </Span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </M2PSimpleTable>
+                }
+            </MudForm>
+        }
+        @if (AddTeamState.ADDING_PRODUCT_TEAM == State)
+        {
+            <MudForm @ref="AddingProductForm" @bind-IsValid="@AddingProductValidationSuccess">
+                <MudStack Row="true">
+                    <M2PText Typo="Typo.h6" Class="mb-3 mt-6">@Resource.ProductInformation</M2PText>
+                </MudStack>
+
+                <MudGrid>
+                    <MudItem xs="6">
+                        <M2PTextField Disabled="true" T="string" Label="@Resource.Team" Value="@Team.Name" />
+                    </MudItem>
+                     <MudItem xs="6">
+                        <MudAutocomplete Disabled="@(IsLoading || IsEditingProduct)" 
+                            T="ProductModel" Label="@Resource.Product" Clearable
+                            @bind-Value="Product"
+                            @ref="MudAutocompleteProduct"
+                            ToStringFunc="@(e => e.Name)" SearchFunc="@SearchProductAsync"
+                            Variant="MudBlazor.Variant.Outlined" Margin="MudBlazor.Margin.Dense"
+                            Dense="true" ShowProgressIndicator="true"
+                            Required="true" RequiredError="@ResourceExt.ValueIsRequired(Resource.Product)" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid>
+                    <MudItem xs="6">
+                        <M2PSelect Disabled="@(IsLoading || IsEditingProduct || !FilteredLayouts.Any() || Product is null || Product.Id == Guid.Empty)"
+                                   T="LayoutModel" Label="@Resource.Layout" @bind-Value="Layout"
+                                   Required="true" RequiredError="@ResourceExt.ValueIsRequired(Resource.Layout)">
+                            @foreach (var item in FilteredLayouts)
+                            {
+                                <MudSelectItem Value="@item">@item.Name</MudSelectItem>
+                            }
+                        </M2PSelect>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <M2PSelect Disabled="@(IsLoading || !Categories.Any() || Layout is null || Layout.Id == Guid.Empty)" 
+                                   Label="@Resource.Category" @bind-Value="Category" Clearable>
+                            @foreach (var category in Categories)
+                            {
+                                <MudSelectItem Value="@category">@category</MudSelectItem>
+                            }
+                        </M2PSelect>
+                    </MudItem>
+                </MudGrid>
+
+                <MudStack Row="true" Class="mt-4" Justify="Justify.SpaceBetween">
+                    <M2PText Typo="Typo.h6" Class="mb-3 mt-6">@Resource.Workstations</M2PText>
+                    <FlexButton Disabled="@(IsLoading || Layout is null || Layout.Id == Guid.Empty || !Workstations.Any())"
+                                Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                                Clicked="OnAddPersonRequested">@Resource.AddHC</FlexButton>
+                </MudStack>
+
+                @if (!Workstations.Any())
+                {
+                    @if (!IsLoading){
+                        <MudGrid>
+                            <MudItem>
+                                @if (Product == null)
+                                {
+                                    <M2PText Typo="Typo.caption" Class="mt-4">
+                                        @Resource.SelectOneProduct
+                                    </M2PText>
+                                }
+                                else if (Layout == null)
+                                {
+                                    if(FilteredLayouts.Any()){
+                                        <M2PText Typo="Typo.caption" Class="mt-4">
+                                            @Resource.SelectOneLayout
+                                        </M2PText>
+                                    }
+                                    else{
+                                        <M2PText Typo="Typo.caption" Color="Color.Error" Class="mt-4">
+                                            @Resource.NoLayoutAvailable
+                                        </M2PText>
+                                    }
+                                }
+                                else
+                                {
+                                    <M2PText Typo="Typo.caption" Color="Color.Error" Class="mt-4">
+                                        @Resource.NoWorkstationAvailable
+                                    </M2PText>
+                                }
+                            </MudItem>
+                        </MudGrid>
+                    }
+                }
+                else
+                {
+                    <M2PTable Elevation="0" @ref="@TeamHCTable" Items="@TeamHCs" RowsPerPage="5" HorizontalScrollbar="true">
+                        <HeaderContent>
+                            <MudTh Class="fixed-column left">
+                                <TH>@Resource.HC</TH>
+                            </MudTh>
+                            @foreach (var tpw in Workstations)
+                            {
+                                <ThCriticalityLevel 
+                                    Workstation="@tpw.Workstation" 
+                                    Allocated="@IsWorkstationAllocated(tpw.Workstation)" />
+                            }
+                            <MudTh>
+                                <TH Align="Align.Right">@Resource.Actions</TH>
+                            </MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd Class="inline fixed-column left">
+                                @context.Name
+                                @if (!IsHCAllocated(context))
+                                {
+                                    <MudTooltip Text="@Resource.HCNotAllocated">
+                                        <M2PIcon Icon="@Icons.Material.Filled.Warning"
+                                                 Color="Color.Error" Class="icon"
+                                                 Size="MudBlazor.Size.Small" />
+                                    </MudTooltip>
+                                }
+                            </MudTd>
+                            @foreach (var tpw in Workstations)
+                            {
+                                <TdCriticalityLevel Workstation="@tpw.Workstation" HCModel="@context" 
+                                    Checkable="true" Disabled="@IsLoading" 
+                                    Checked="@tpw.ContainsHC(context)" 
+                                    CheckedChanged="() => OnAddPersonOnWorkstationRequested(tpw, context)" />
+                            }
+                            <MudTd>
+                                <Span Align="Align.Right">
+                                    <FlexIconButton Disabled="@IsLoading"
+                                        Name="@FlexIcons.Action.Delete" Color="FlexColor.Red"
+                                        Variant="M2P.Web.Components.Variant.Outlined"
+                                        Clicked="() => OnDeletePersonRequested(context)" />
+                                </Span>
+                            </MudTd>
+                        </RowTemplate>
+                        <PagerContent>
+                            @if (!IsLoading && !TeamHCs.Any())
+                            {
+                                <M2PText Align="Align.Center" Class="mt-10 mb-6">@Resource.NoRecordsFound</M2PText>
+                            }
+                            <M2PPagination Disabled="@(IsLoading || !TeamHCs.Any())"
+                                SelectedChanged="TeamHCPageChanged"
+                                Count="@((TeamHCs.Count() + TeamHCTable.RowsPerPage - 1) / TeamHCTable.RowsPerPage)"
+                                Class="d-flex justify-center pa-4" />
+                        </PagerContent>
+                    </M2PTable>
+                }
+            </MudForm>
+        }
+
+        <MudStack Row="true" AlignItems="AlignItems.End" Justify="Justify.FlexEnd" Class="mt-6">
+            @if (!IsLoading && AddTeamState.ADDING_PRODUCT_TEAM == State)
+            {
+                <M2PText Typo="Typo.caption" Color="Color.Error" Align="Align.Right" >
+                    @if (Workstations.Any() && !IsWorkstationListValid())
+                    {
+                        @Resource.WorkstationsMustBeAllocated
+                    }
+                    else if (TeamHCs.Any() && !IsTeamHCsAllocated())
+                    {
+                        @Resource.HCsMustBeAllocated
+                    }
+                </M2PText>
+            }
+        </MudStack>
+        
+        <Divider Class="mt-2 mb-4" />
+        
+        <MudStack Row="true" AlignItems="AlignItems.End" Justify="Justify.FlexEnd">
+            <FlexButton Disabled="@IsLoading" Clicked="OnCancel">
+                @Resource.Cancel
+            </FlexButton>
+
+            @if (AddTeamState.ADDING_TEAM == State)
+            {
+                <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                            Disabled="IsLoading"
+                            Clicked="OnAddTeamRequested">
+                    @Resource.Save
+                </FlexButton>
+            }
+            @if (AddTeamState.ADDING_PRODUCT_TEAM == State)
+            {
+                <FlexButton Color="FlexColor.Blue" Variant="M2P.Web.Components.Variant.Filled"
+                            Disabled="@(IsLoading || !AddingProductValidationSuccess || !IsWorkstationListValid() || !IsTeamHCsAllocated())"
+                            Clicked="OnProductSelected">
+                    @Resource.Save
+                </FlexButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
